@@ -1,0 +1,144 @@
+%YAML 1.2
+---
+name: Exper
+file_extensions: [exper]
+scope: source.tree
+
+contexts:
+ main:
+  #- include: canWeCaptureOptional
+  #- include: colors
+  - include: isGreedy
+  # - match: \A()
+  #   push: indentedBlock
+  #- include: indentedBlock
+
+ isGreedy:
+  - match: dog
+    scope: storage.type.string._blue
+  - match: whamdog
+    scope: entity.name.function._green
+    #push: [foobar]
+    #push: dog
+#    scope: entity.name.function._green
+  # - match: (m|a)
+  #   scope: entity.name.function._green
+  #   push: take2
+
+ take2:
+   - match: (\1|m|a)
+     scope: invalid.illegal.error._pink_back
+     set: take2
+
+
+ bim:
+#  - meta_scope: storage.type.string._blue
+  - match: zzz
+    scope: storage.type.string._blue
+
+ foobar:
+  - meta_scope: entity.name.function._green
+  - match: bam
+    scope: storage.type.string.bam._blue
+    # push:
+    #   - match: .
+    #     scope: invalid.illegal.error._pink_back
+  - match: .
+    scope: entity.name.tag.any._red
+
+ dog:
+  - match: dogdog
+    scope: storage.type.string._blue
+  - match: $
+    pop: true
+
+ indentedBlock:
+  - match: (\1 ).+$
+    scope: storage.type.string._blue
+    set: indentedBlock
+  - match: (\1).*$
+    scope: entity.name.function._green
+    set: indentedBlock
+  # - match: [^(?:\1)]
+  #   scope: invalid.illegal.error.pop
+  #   set: indentedBlock
+
+
+
+#  colors:
+#   - match: _blue
+#     scope: storage.type.string._blue
+#   - match: _red
+#     scope: entity.name.tag._red
+#   - match: _yellow
+#     scope: string.unquoted.plain.out._yellow
+#   - match: _gray_italics
+#     scope: comment.block.documentation._gray_italics # MATCH
+#   - match: _green
+#     scope: entity.name.function._green
+#   - match: _pink_back
+#     scope: invalid.illegal.error._pink_back # MATCH
+#   - match: _white
+#     scope: source._white
+#   - match: _orange
+#     scope: variable.parameter.function._orange
+#   - match: _purple
+#     scope: constant.numeric.yaml-version._purple
+
+
+
+
+# # source.yaml string.unquoted.plain.out.yaml
+
+#  # Yes
+#  canWeCaptureNothing:
+#   - match: dog()cat
+#     scope: invalid.illegal.error.nothing
+
+#  canWeCaptureFirstLine:
+#   - match: .*
+#     push: secondLine
+
+#  secondLine:
+#   - match: '\1 '
+#     push: secondLine
+
+#  # Yes, multiple as well
+#  canWeCaptureOptional:
+#   - match: dog( *)cat
+#     scope: entity.name.namespace.rootScope
+#     push:
+#     - match: fred\1bam
+#       scope: invalid.illegal.error.nothing
+#       pop: true
+
+#  # canWeCaptureOptional:
+#  #  - match: (?i)(u?ru?)("""|''')
+#  #    push:
+#  #      - match: '\1'
+#  #        pop: true
+
+
+#  yaya:
+#   - match: ^\s*(?=(?i)(ur|ru|u|r)?("""|'''))
+#     push:
+#     - match: (?i)(u)?("""|''')
+#       captures:
+#         1: storage.type.string.python
+#         2: punctuation.definition.comment.begin.python
+#       set:
+#         - meta_scope: comment.block.documentation.python
+#         - include: escaped-unicode-char
+#         - include: escaped-char
+#         - match: '\2'
+#           scope: punctuation.definition.comment.end.python
+#           pop: true
+#     - match: (?i)(u?ru?)("""|''')
+#       captures:
+#         1: storage.type.string.python
+#         2: punctuation.definition.comment.begin.python
+#       set:
+#         - meta_scope: comment.block.documentation.python
+#         - match: '\2'
+#           scope: punctuation.definition.comment.end.python
+#           pop: true

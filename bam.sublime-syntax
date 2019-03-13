@@ -1,0 +1,70 @@
+%YAML 1.2
+---
+name: Bam
+file_extensions: [bam]
+scope: source.tree
+
+# Look ahead (?= ) works but capture problem
+# Capture works but advances the regex
+# (?:) not captured group.?
+# (?m) -> dot matches newline?
+# From what I can tell ?m does not match newlines
+#   - match: (?m:(F(.|\n)*))
+#    scope: invalid.illegal.error.indentedBlock
+
+  # (?=subexp)         look-ahead
+  # (?!subexp)         negative look-ahead
+  # (?<=subexp)        look-behind
+  # (?<!subexp)        negative look-behind
+
+contexts:
+ main:
+  - include: indentedBlock
+#   - match: (?=\A( ))
+# #    scope: invalid.illegal.error.indentedBlock
+#     push: indentedBlock
+#   - match: (?=^( ))
+# #    scope: invalid.illegal.error.indentedBlock
+#     push: indentedBlock
+#   - include: noIndent
+
+ noIndent:
+  - match: ^.*$
+    scope: string.unquoted.heredoc.noIndent
+
+ # fooBlock:
+ #  - meta_scope: invalid.illegal.error.fooBlock
+ #  - match: .*
+ #    scope: constant.numeric.integer.faaaaa
+ #  - match: $
+ #    pop: true
+
+ # firstIndent:
+ #  - match: (\1 ).*
+ #    scope: invalid.illegal.error.push
+ #    push: indentedBlock
+ #  - match: ' .*'
+ #    scope: invalid.illegal.error.same
+ #  - match: ^(?! )
+ #    pop: true
+
+ indentedBlock:
+  - match: (\A|^) (?! ).*
+    scope: invalid.illegal.error.same
+  - match: (\1 ) (\A|^)(  +)
+    scope: invalid.illegal.error.push
+    push: indentedBlock
+  - match: (?!^ )
+    scope: invalid.illegal.error.pop
+    pop: true
+
+
+ # indentedBlock:
+ #  - match: (\1 ).*
+ #    scope: invalid.illegal.error.push
+ #    push: indentedBlock
+ #  - match: (?! ).*$
+ #    scope: invalid.illegal.error.same
+ #  - match: (?! )
+ #    scope: invalid.illegal.error.pop
+ #    pop: true

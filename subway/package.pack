@@ -1,0 +1,8 @@
+name subway
+version 1.0.0
+description Builds a sublime syntax definition file.
+main index.js
+keywords subway
+license MIT
+dependencies
+ jtree *

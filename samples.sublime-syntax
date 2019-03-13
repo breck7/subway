@@ -1,0 +1,12 @@
+name: PHP
+scope: source.php
+
+contexts:
+  main:
+    - match: <<<([A-Za-z][A-Za-z0-9_]*)
+      push: heredoc
+
+  heredoc:
+    - meta_scope: string.unquoted.heredoc
+    - match: ^\1;
+        pop: true

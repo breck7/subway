@@ -1,0 +1,62 @@
+%YAML 1.2
+---
+name: Flow
+file_extensions: [flow]
+scope: source.tree
+
+# http://www.sublimetext.com/docs/3/syntax.html
+# http://www.sublimetext.com/docs/3/scope_naming.html
+# https://manual.macromates.com/en/regular_expressions
+# https://forum.sublimetext.com/t/indent-block-syntax-highlighting/24161/5
+# https://forum.sublimetext.com/t/solved-syntax-tmlanguage-and-indentation/4276
+
+
+# Key things is how to count the indent level. Use $1 or \1 ?
+
+variables:
+ rootKeywords: '(table|chart|scatterplot)'
+ start: (\A|^)
+
+contexts:
+ main:
+  - include: chartScope
+   #- include: rootScope
+
+ rootScope:
+   - match: '{{start}}table\b'
+     scope: entity.name.namespace.rootScope
+     push: [tableScope, keywordScope]
+   - match: '{{start}}chart\b'
+     scope: entity.name.namespace.rootScope
+     push: [chartScope, keywordScope]
+   - match: .*
+     scope: invalid.illegal.error
+
+ chartScope:
+  - match: '{{start}}\b'
+    scope: entity.name.namespace.tilePropertyScope
+    - match: \d+
+     scope: constant.numeric.integer
+  #- include: tileScope
+
+ tableScope:
+  - include: tileScope
+
+ tileScope:
+  - match: title\b
+    scope: entity.name.namespace.tilePropertyScope
+    push: [keywordScope, chartScope]
+  - match: '\n  '
+    pop: true
+
+ keywordScope:
+  - match: $
+    pop: true
+  - match: ' '
+    push: contentScope
+
+ contentScope:
+  - match: .*
+    scope: meta.string.contentScope
+  - match: $
+    pop: true

@@ -1,0 +1,88 @@
+%YAML 1.2
+---
+name: Bux
+file_extensions: [bux]
+scope: source.tree
+
+# Bux.
+
+variables:
+ rootKeywords: club
+
+contexts:
+ main:
+  - include: foo
+
+# (?=subexp)   look ahead .... DONT THINK WE CAN USE B/C ITS 2 LINES...
+# (?=\1)
+# clear_scopes ?
+ firstLine:
+   - match: '\A +'
+     scope: invalid.illegal.error
+   - match: '\Aclub\b.*\n(?=[^ ])'
+     scope: entity.name.namespace.rootScope
+     push: [rootContext, clubLine]
+   - match: '\Aclub\b.*\n(?= )'
+     scope: entity.name.namespace.rootScope
+     push: [clubContext, clubLine]
+
+ clubContext:
+   - match: '( +)'
+   - match: title
+     scope: punctuation.section.block.begin
+   - match: .+
+     scope: meta.enum
+   - match: $
+     pop: true
+
+
+ clubLine:
+   - match: .+
+     scope: constant.numeric.integer
+   - match: $
+     pop: true
+
+
+# (?=\1)
+
+ rootContext:
+  - match: '^club\b'
+    scope: entity.name.namespace.rootScope
+    push: club
+  - match: '.*'
+    scope: invalid.illegal.error
+
+ indentedContext:
+  - match: '^(\1 )club\b'
+    scope: entity.name.namespace.rootScope
+    push: club
+  - match: '.*'
+    scope: invalid.illegal.error
+
+ club:
+  - match: ' title'
+    scope: constant.numeric.integer
+  - include: rootContext
+
+  # start:
+  #   - match: ( *)
+  #     push: heredoc
+
+  # heredoc:
+  #   - meta_scope: string.unquoted.heredoc
+  #   - match: ^\1;
+  #       pop: true
+
+
+
+
+# Each line, scenarios:
+# same.
+# greater by 1.
+# fewer by N.
+
+# http://www.sublimetext.com/docs/3/syntax.html
+# http://www.sublimetext.com/docs/3/scope_naming.html
+# https://manual.macromates.com/en/regular_expressions
+# https://forum.sublimetext.com/t/indent-block-syntax-highlighting/24161/5
+# https://forum.sublimetext.com/t/solved-syntax-tmlanguage-and-indentation/4276

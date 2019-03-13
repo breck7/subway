@@ -1,0 +1,77 @@
+
+  push:
+    - match: ^([ ]+)(?! )  # match first non-empty line to determine indentation level
+      # note that we do not check if indentation is enough
+      set:
+        - meta_scope: string.unquoted.block.yaml
+          meta_include_prototype: false
+        - match: ^(?!\1|\s*$)
+          pop: true
+    - match: ^(?=\S)  # the block is empty
+      pop: true
+    - include: comment  # include comments but not properties
+    - match: .+
+      scope: invalid.illegal.expected-comment-or-newline.yaml
+
+
+
+
+%YAML 1.2
+---
+name: Flow
+file_extensions: [flow]
+scope: source.tree
+
+# http://www.sublimetext.com/docs/3/syntax.html
+# http://www.sublimetext.com/docs/3/scope_naming.html
+# https://manual.macromates.com/en/regular_expressions
+# https://forum.sublimetext.com/t/indent-block-syntax-highlighting/24161/5
+# https://forum.sublimetext.com/t/solved-syntax-tmlanguage-and-indentation/4276
+
+
+# Key things is how to count the indent level. Use $1 or \1 ?
+
+variables:
+ rootKeywords: '(table|chart|scatterplot)'
+
+contexts:
+ main:
+   - match: (\A){{rootKeywords}}\b
+     scope: entity.name.namespace.rootKeyword
+     push: [spaceContext, tile, keyword]
+   - match: (^){{rootKeywords}}\b
+     scope: entity.name.namespace.rootKeyword
+     push: [spaceContext, tile, keyword]
+   - match: .*
+     scope: invalid.illegal.error
+
+ spaceContext:
+  - match: ' '
+    push: spaceContext
+  - match: ''
+    pop: true
+
+ tile:
+  # - include: main
+  - match: ' left\b'
+    push: setting
+  - match: ^[^ ]
+    pop: true
+
+ setting:
+  - match: .*
+    scope: variable.annotation.setting
+  - match: $
+    pop: true
+
+ keyword:
+  - match: $
+    pop: true
+  - match: ' '
+    push: content
+
+ content:
+  - match: .*
+    scope: meta.string.content
+  - match: $
+    pop: true

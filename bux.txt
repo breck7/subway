@@ -1,0 +1,51 @@
+2 scopes:
+root
+ club
+club
+ title
+ club
+
+
+club
+ title Bam
+club
+ title
+ club
+  title Foo
+club
+bam
+
+
+club
+ title Bam
+club
+ title
+ club
+  title Foo
+club
+bam
+
+
+person
+
+
+name: PHP
+scope: source.php
+
+contexts:
+  main:
+    - match: <<<([A-Za-z][A-Za-z0-9_]*)
+      push: heredoc
+
+  heredoc:
+    - meta_scope: string.unquoted.heredoc
+    - match: ^\1;
+        pop: true
+
+
+
+
+ (?=subexp)         look-ahead
+  (?!subexp)         negative look-ahead
+  (?<=subexp)        look-behind
+  (?<!subexp)        negative look-behind

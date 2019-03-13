@@ -1,0 +1,19 @@
+%YAML 1.2
+---
+name: Grammar
+file_extensions: [grammar]
+scope: source.tree
+
+contexts:
+ main:
+  - include: keywords
+
+ keywords:
+   - match: (\A|^) *[^ ]+
+     scope: storage.type.string._blue
+     set: [content]
+
+ content:
+   - match: $
+     scope: entity.name.type.tree
+     pop: true

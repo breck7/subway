@@ -1,0 +1,58 @@
+%YAML 1.2
+---
+name: Flow
+file_extensions: [flow]
+scope: source.tree
+
+variables:
+ rootKeywords: '(table|chart)'
+ start: (\A|^)
+
+contexts:
+ main:
+   #- include: chartScope
+  - include: rootScope
+
+ rootScope:
+   - match: '{{start}}()table\b'
+     scope: string.unquoted.plain.out._yellow
+     push: [tableScope, keywordScope]
+   - match: '{{start}}()chart\b'
+     scope: string.unquoted.plain.out._yellow
+     push: [chartScope, keywordScope]
+   - match: .*
+     scope: variable.parameter.function._orange
+
+ chartScope:
+  - include: tileScope
+
+ tableScope:
+  - include: tileScope
+
+ spaceScope:
+  - match: ^()([^ ]|$)
+    pop: true
+  - match: '^\1 '
+    push: spaceScope
+  - match: '^\1([^ ]+|$)'
+  - match: '^(?!^\1)'
+    pop: true
+
+ tileScope:
+  - match: '\1 title\b'
+    scope: storage.type.string._blue
+    push: [keywordScope]
+  - match: $
+    pop: true
+
+ keywordScope:
+  - match: $
+    pop: true
+  - match: ' '
+    push: contentScope
+
+ contentScope:
+  - match: .*
+    scope: entity.name.function._green
+  - match: $
+    pop: true

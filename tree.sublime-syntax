@@ -1,0 +1,19 @@
+%YAML 1.2
+---
+name: TreeNotation
+file_extensions: [tree]
+scope: source.tree
+
+contexts:
+ main:
+  - include: keywords
+
+ keywords:
+   - match: (\A|^) *[^ ]+
+     scope: string.template-string.tree
+     set: [content]
+
+ content:
+   - match: $
+     scope: entity.name.type.tree
+     pop: true
