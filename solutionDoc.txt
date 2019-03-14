@@ -314,5 +314,7 @@ Compile it to browser friendly make it real time for faster testing feedback?
 
 
 
+When you push onto the stack, the new context DOES get the full line, but it seems that you only match from where the push happend. (You can do negative look behinds behind the current push)
+
 
 

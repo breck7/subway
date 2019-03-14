@@ -32,6 +32,8 @@ const combined = scripts
       .getString()
   )
   .join("\n")
+  .replace(/\/\/ window\./g, "window.")
+  .replace(/export.+/g, "")
 
 fs.writeFileSync(outputFile, `"use strict"\n` + combined, "utf8")
 console.log("tsc -p tsconfig.browser.json")

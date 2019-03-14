@@ -30,10 +30,15 @@ class MatchNode extends jtree.NonTerminalNode {
     getScopes() {
         return this.has("scope") ? this.get("scope").split(" ") : [];
     }
-    test(line) {
+    test(line, backReferences) {
         let match;
         let matches = [];
-        const reg = this.getContent();
+        let reg = this.getContent();
+        // replace back references
+        for (let index in backReferences) {
+            let re2 = new RegExp("\\" + index, "g");
+            reg = reg.replace(re2, backReferences[index]);
+        }
         let re = new RegExp(reg, "g");
         while ((match = re.exec(line)) !== null) {
             const text = match[0];
@@ -66,6 +71,51 @@ class ContextNode extends jtree.NonTerminalNode {
         // todo: add includes and prototypes
         return this.items;
     }
+    handle(line, state, spans, consumed = 0, backReferences = []) {
+        const allMatchResults = this.getChildrenByNodeType(MatchNode).map(node => node.test(line, backReferences));
+        console.log(backReferences);
+        // Sort by left most.
+        const sorted = lodash.sortBy(lodash.flatten(allMatchResults), ["start"]);
+        const len = line.length;
+        while (consumed < len && sorted.length) {
+            const nextMatch = sorted.shift();
+            const scopes = state.getScopeChain();
+            // add skipped matches:
+            if (nextMatch.start > consumed)
+                spans.push({
+                    text: line.substr(consumed, nextMatch.start - consumed),
+                    scopes: scopes
+                });
+            // Apply match
+            const matchNode = nextMatch.matchNode;
+            spans.push({
+                text: nextMatch.text,
+                scopes: scopes.concat(matchNode.getScopes())
+            });
+            const matchObj = matchNode.toObject();
+            if (matchObj.push) {
+                console.log("push context " + matchObj.push);
+                consumed = state.pushContext(matchObj.push).handle(line, state, spans, nextMatch.end, nextMatch.captured);
+            }
+            else if (matchObj.pop) {
+                console.log("pop context");
+                state.contextStack.pop();
+                // jump consumed
+                return nextMatch.end;
+            }
+            else if (matchObj.set) {
+                state.contextStack.pop();
+                return state.pushContext(matchObj.push).handle(line, state, spans, nextMatch.end, nextMatch.captured);
+            }
+        }
+        // Not sure about this. What about run ons?
+        if (consumed < len - 1)
+            spans.push({
+                text: line.substr(consumed),
+                scopes: state.getScopeChain()
+            });
+        return consumed;
+    }
 }
 exports.ContextNode = ContextNode;
 class State {
@@ -79,6 +129,13 @@ class State {
         arr.unshift(this._program.scope);
         return arr;
     }
+    pushContext(name) {
+        const context = this._program.getNode("contexts " + name);
+        if (!context)
+            throw new Error(`${name} context not found`);
+        this.contextStack.push(context);
+        return context;
+    }
     get currentContext() {
         return this.contextStack[this.contextStack.length - 1];
     }
@@ -89,38 +146,7 @@ class Line {
     }
     parse(state) {
         const spans = [];
-        const line = this._string;
-        const context = state.currentContext;
-        const allMatchResults = context
-            .getChildrenByNodeType(MatchNode)
-            .map(node => node.test(line));
-        // Sort by left most.
-        const sorted = lodash.sortBy(lodash.flatten(allMatchResults), ["start"]);
-        let consumed = 0;
-        const len = line.length;
-        const scopes = state.getScopeChain();
-        while (consumed < len && sorted.length) {
-            const nextMatch = sorted.shift();
-            // add skipped matches:
-            if (nextMatch.start > consumed)
-                spans.push({
-                    text: line.substr(consumed, nextMatch.start - consumed),
-                    scopes: scopes
-                });
-            // Apply match
-            spans.push({
-                text: nextMatch.text,
-                scopes: scopes.concat(nextMatch.matchNode.getScopes())
-            });
-            // jump consumed
-            consumed = nextMatch.end;
-        }
-        // Not sure about this. What about run ons?
-        if (consumed < len - 1)
-            spans.push({
-                text: line.substr(consumed),
-                scopes: scopes
-            });
+        state.currentContext.handle(this._string, state, spans);
         return `line\n` + spans.map(span => ` span ${span.text}\n  scopes ${span.scopes.join(" ")}`).join("\n");
     }
 }
@@ -244,7 +270,3 @@ const Colors = {
     purple: "constant.numeric.yaml-version._purple"
 };
 exports.Colors = Colors;
-// window.Colors = Colors
-// window.ProgramNode = ProgramNode
-// window.ContextNode = ContextNode
-// window.MatchNode = MatchNode
