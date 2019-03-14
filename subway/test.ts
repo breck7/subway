@@ -2,6 +2,7 @@
 
 const jtree = require("jtree")
 const subwayNodes = require("./built/nodes.js")
+const fs = require("fs")
 const colors = subwayNodes.Colors
 
 const grammarPath = __dirname + "/subway.grammar"
@@ -11,6 +12,9 @@ const SubwayConstructor = jtree.getProgramConstructor(grammarPath)
 // [] Test programs for errors
 // [] Execute programs and check results
 
+const save = (name: string, results: string) =>
+  fs.writeFileSync(__dirname + `/testOutput/${name}.html`, results, "utf8")
+
 const testTree: any = {}
 
 testTree.heredoc = () => {
@@ -18,6 +22,8 @@ testTree.heredoc = () => {
 global_scope source.php
 contexts
  main
+  match <?php
+   scope ${colors.orange}.open_php
   match <<<([A-Za-z][A-Za-z0-9_]*)
    push heredoc
  heredoc
@@ -37,10 +43,10 @@ DOG;`
  span <?php
   scopes source.php
 line
- span  
+ span
   scopes source.php
 line
- span $foo = 
+ span $foo =
   scopes source.php
  span <<<DOG
   scopes source.php string.unquoted.heredoc
@@ -59,9 +65,11 @@ line
 
   const program = new SubwayConstructor(grammar)
 
-  const result = program.execute(code)
+  const results = program.execute(code)
 
-  console.log(result)
+  console.log(results)
+
+  save("heredoc", program.toHtml(results))
 }
 
 testTree.digits = () => {
@@ -72,12 +80,12 @@ global_scope source.dag
 contexts
  main
   match \\d+
-   scopes ${colors.blue}.digit
+   scope ${colors.blue}.digit
    push brackets
   match \\+
-   scopes ${colors.orange}.plus
+   scope ${colors.orange}.plus
   match ;
-   scopes ${colors.red}.semicolon`
+   scope ${colors.red}.semicolon`
 
   const program = new SubwayConstructor(grammar)
 
@@ -99,9 +107,11 @@ contexts
   23`)
   console.log(results)
 
+  save("digits", program.toHtml(results))
+
   // console.log(program.toString())
   //const yaml = program.toYAML()
   //console.log(yaml)
 }
-
 testTree.digits()
+testTree.heredoc()

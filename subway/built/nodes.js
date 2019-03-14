@@ -1,4 +1,3 @@
-#!/usr/bin/env ts-node
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const lodash = require("lodash");
@@ -29,7 +28,7 @@ class MatchNode extends jtree.NonTerminalNode {
         this.captures = {};
     }
     getScopes() {
-        return this.get("scopes").split(" ");
+        return this.has("scope") ? this.get("scope").split(" ") : [];
     }
     test(line) {
         let match;
@@ -56,6 +55,7 @@ class MatchNode extends jtree.NonTerminalNode {
         return matches;
     }
 }
+exports.MatchNode = MatchNode;
 class Include {
 }
 class ContextNode extends jtree.NonTerminalNode {
@@ -67,6 +67,7 @@ class ContextNode extends jtree.NonTerminalNode {
         return this.items;
     }
 }
+exports.ContextNode = ContextNode;
 class State {
     constructor(program) {
         this.contextStack = [];
@@ -120,7 +121,7 @@ class Line {
                 text: line.substr(consumed),
                 scopes: scopes
             });
-        return spans;
+        return `line\n` + spans.map(span => ` span ${span.text}\n  scopes ${span.scopes.join(" ")}`).join("\n");
     }
 }
 class ProgramNode extends jtree.program {
@@ -158,11 +159,53 @@ contexts:`;
     get scope() {
         return this.get("global_scope");
     }
+    toHtml(content) {
+        const tree = new jtree.TreeNode(content);
+        const scopesToStyle = scopes => {
+            return scopes
+                .split(" ")
+                .map(scope => {
+                const color = scope.match(/\._([^.]+)/);
+                if (color)
+                    return `color: ${color[1]};`;
+                return "";
+            })
+                .filter(i => i)
+                .join("");
+        };
+        return ("<div style='font-family: monaco; white-space: pre;'>" +
+            tree
+                .map(line => line
+                .map(span => `<span title=" ${span.get("scopes")}" style='${scopesToStyle(span.get("scopes"))}'>${lodash.escape(span.getContent())}</span>`)
+                .join(""))
+                .join("<br>") +
+            "</div>");
+    }
+    /*
+  line
+   span 1
+    scopes source.dag storage.type.string._blue.digit
+   span
+    scopes source.dag
+   span +
+    scopes source.dag variable.parameter.function._orange.plus
+   span
+    scopes source.dag
+   span 1
+    scopes source.dag storage.type.string._blue.digit
+   span ;
+    scopes source.dag entity.name.tag._red.semicolon
+  line
+  
+    */
     execute(content) {
         const state = new State(this);
-        const res = content.split("\n").map(line => new Line(line).parse(state));
-        console.log(new jtree.TreeNode(res).toString());
-        return res;
+        return content
+            .split("\n")
+            .map(line => new Line(line).parse(state))
+            .join("\n");
+        //console.log(new jtree.TreeNode(res).toString())
+        // return res
         // const contextStack = [this.contexts.main]
         // for (let line in lines) {
         //   let context = contextStack[contextStack.length - 1]
@@ -188,19 +231,20 @@ contexts:`;
         // return results
     }
 }
-module.exports = {
-    ProgramNode: ProgramNode,
-    ContextNode: ContextNode,
-    MatchNode: MatchNode,
-    Colors: {
-        blue: "storage.type.string._blue",
-        red: "entity.name.tag._red",
-        yellow: "string.unquoted.plain.out._yellow",
-        gray_italics: "comment.block.documentation._gray_italics",
-        green: "entity.name.function._green",
-        pink_back: "invalid.illegal.error._pink_back",
-        white: "source._white",
-        orange: "variable.parameter.function._orange",
-        purple: "constant.numeric.yaml-version._purple"
-    }
+exports.ProgramNode = ProgramNode;
+const Colors = {
+    blue: "storage.type.string._blue",
+    red: "entity.name.tag._red",
+    yellow: "string.unquoted.plain.out._yellow",
+    gray_italics: "comment.block.documentation._gray_italics",
+    green: "entity.name.function._green",
+    pink_back: "invalid.illegal.error._pink_back",
+    white: "source._white",
+    orange: "variable.parameter.function._orange",
+    purple: "constant.numeric.yaml-version._purple"
 };
+exports.Colors = Colors;
+// window.Colors = Colors
+// window.ProgramNode = ProgramNode
+// window.ContextNode = ContextNode
+// window.MatchNode = MatchNode

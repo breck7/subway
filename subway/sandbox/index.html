@@ -1,0 +1,35 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <script type="text/javascript" src="/node_modules/jquery/dist/jquery.min.js"></script>
+    <script type="text/javascript" src="lodash.min.js"></script>
+    <script type="text/javascript" src="/node_modules/jtree/built/jtree.browser.js"></script>
+    <script type="text/javascript" src="/built/subway.browser.js"></script>
+    <script type="text/javascript" src="sandbox.browser.js"></script>
+    <link rel="stylesheet" type="text/css" href="sandbox.css" />
+  </head>
+  <body>
+    <h1>Tree Notation Highlighter Sandbox</h1>
+    <textarea id="grammar">version 2.1
+name dag
+file_extensions dag
+global_scope source.dag
+contexts
+ main
+  match \d+
+   scope foo._blue.digit
+   push brackets
+  match \+
+   scope foo._orange}.plus
+  match ;
+   scope foo._red.semicolon</textarea>
+    <textarea id="code">1 + 1;
+  23 + 232;;
+  2++2;zaaa
+
+  23</textarea>
+    <div id="highlighted"></div>
+    <pre id="treeResults"></pre>
+  </body>
+</html>

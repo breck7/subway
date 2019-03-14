@@ -57,8 +57,8 @@
 @keyword pop
  @description True is only acceptable value
  @columns bool
-@keyword scopes
- @columns scope*
+@keyword scope
+ @columns scope
 @keyword set push
 @keyword embed
 @keyword captures
@@ -70,7 +70,7 @@
  @columns regex*
  @keywords
   push
-  scopes
+  scope
   push_context
   set_context
   pop

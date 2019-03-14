@@ -285,6 +285,34 @@ This latest bug.
 -- Yes. ContextNode is never being created. Why??
 
 
+todo:
+[] meta_scope
+[] push/pop
+[] 1. captures
+[] backreferences
+[] set
+[] meta_content_scope
+[] variables
+[] include
+
+
+
+Note: the current scope when you do ctrl+p is for the character after the cursor.
+However, when there is no character on the line, you preserve the scope still.
+-- This might be part of the problem with our thing. We may need to come back to this.
+
+
+
+
+
+Note: it looks like there is a bug with "declaration" in typescript. It continues past where you'd expect.
+
+
+
+Compile it to browser friendly make it real time for faster testing feedback?
+
+
+
 
 
 

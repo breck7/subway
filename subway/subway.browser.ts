@@ -1,6 +1,7 @@
-import * as lodash from "lodash"
+"use strict"
+
 // import * as jtree from "jtree"
-const jtree = require("jtree")
+
 
 declare type scope = string
 declare type contextPath = string // Ie:  Packages/JavaScript/JavaScript.sublime-syntax
@@ -345,8 +346,7 @@ const Colors = {
 
 export { Colors, ProgramNode, ContextNode, MatchNode }
 
-// window.nodes = {}
 // window.Colors = Colors
-// window.nodes.ProgramNode = ProgramNode
-// window.nodes.ContextNode = ContextNode
-// window.nodes.MatchNode = MatchNode
+// window.ProgramNode = ProgramNode
+// window.ContextNode = ContextNode
+// window.MatchNode = MatchNode
