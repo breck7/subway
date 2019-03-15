@@ -281,7 +281,17 @@ contexts:`;
                 .join("<br>") +
             "</div>");
     }
+    expand() {
+        this.getNode("contexts").forEach(context => {
+            context.findNodes("include").forEach(inc => {
+                const included = this.getNode(`contexts ${inc.getContent()}`);
+                // patch?
+                inc.replaceNode(str => included.childrenToString());
+            });
+        });
+    }
     execute(content) {
+        this.expand();
         const state = new State(this);
         return content
             .split("\n")

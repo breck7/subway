@@ -394,7 +394,18 @@ contexts:`
     )
   }
 
+  expand() {
+    this.getNode("contexts").forEach(context => {
+      context.findNodes("include").forEach(inc => {
+        const included = this.getNode(`contexts ${inc.getContent()}`)
+        // patch?
+        inc.replaceNode(str => included.childrenToString())
+      })
+    })
+  }
+
   execute(content: string): string {
+    this.expand()
     const state = new State(this)
     return content
       .split("\n")
