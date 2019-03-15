@@ -67,13 +67,15 @@ class MatchNode extends jtree.NonTerminalNode implements ContextStatement {
   referenced context irrespective of their meta_include_prototype setting.*/
   public with_prototype: ContextNode
 
-  public test(line: string, backReferences: string[]): MatchResult[] {
-    let match: RegExpExecArray
-    let matches: MatchResult[] = []
+  public getReg(state: State) {
     let reg = this.getContent()
+    const backReferences = state.getBackReferences()
 
-    if (backReferences.length > 0 && !reg.match(/\\\d/))
-      console.error(`Expected a backreference(s) in ${reg} but none passed.`)
+    if (backReferences.length === 0 && reg.match(/\\\d/))
+      state.logError(
+        `Expected a backreference(s) in '${reg}' but none passed. Current context '${state.currentContext.getId()}'. Parent contexts: '${state.getContextChain()}' .`,
+        backReferences
+      )
 
     // replace back references
     for (let index = 0; index < backReferences.length; index++) {
@@ -81,6 +83,14 @@ class MatchNode extends jtree.NonTerminalNode implements ContextStatement {
       reg = reg.replace(re2, backReferences[index])
     }
 
+    return reg
+  }
+
+  public test(line: string, state: State): MatchResult[] {
+    let match: RegExpExecArray
+    let matches: MatchResult[] = []
+
+    let reg = this.getReg(state)
     let re = new RegExp(reg, "g")
 
     let startChar = -1
@@ -94,6 +104,7 @@ class MatchNode extends jtree.NonTerminalNode implements ContextStatement {
       let index = 1
       while (match[index] !== undefined) {
         captured.push(match[index])
+        state.log(`Saving backreference '${match[index]}' from reg '${reg}' in line '${line}'`)
         index++
       }
       const result: MatchResult = {
@@ -106,8 +117,8 @@ class MatchNode extends jtree.NonTerminalNode implements ContextStatement {
       matches.push(result)
     }
 
-    console.log(line)
-    console.log(matches)
+    if (matches.length) state.log(`'${line}' matched '${reg}'`, matches)
+    else state.log(`'${line}' no match on '${reg}'`)
 
     return matches
   }
@@ -119,6 +130,10 @@ class ContextNode extends jtree.NonTerminalNode {
   public id: contextName
   public items: ContextStatement[]
   public backReferences: string[] = []
+
+  isMain() {
+    return this.getId() === "main"
+  }
 
   getId() {
     return this.getKeyword()
@@ -149,64 +164,84 @@ class ContextNode extends jtree.NonTerminalNode {
     return this.items
   }
 
-  handle(line, state, spans, consumed = 0): number {
+  handle(state: State, spans, consumed = 0): number {
+    const line = state.currentLine
+    state.log(`'${this.getKeyword()}' handling '${line}'`)
     const allMatchResults: MatchResult[][] = this.getChildrenByNodeType(MatchNode).map(node =>
-      (<MatchNode>node).test(line, this.backReferences)
+      (<MatchNode>node).test(line, state)
     )
-
-    console.log(line)
 
     // Sort by left most.
     const sorted = lodash.sortBy(lodash.flatten(allMatchResults), ["start"])
     const len = line.length
-    console.log(sorted.length)
-    if (line === "DOG;") debugger
-    while (consumed < len && sorted.length) {
+    state.log(`${sorted.length} matches for '${line}'`)
+    while (consumed <= len && sorted.length) {
       const nextMatch = sorted.shift()
       const scopes = state.getScopeChain()
 
-      if (nextMatch.start < consumed) continue
+      state.log(`match '${nextMatch.text}' starts on position ${nextMatch.start} and consumed is ${consumed}`)
+
+      if (nextMatch.start < consumed) {
+        state.log(
+          `for match '${nextMatch.text}' and reg '${nextMatch.matchNode.getReg(state)}', nextMatch.start is ${
+            nextMatch.start
+          } and consumed is ${consumed}, continuing loop.`
+        )
+        state.log("for some reason start is less than consumed. why? note this in code.")
+        continue
+      }
 
       // add skipped matches:
-      if (nextMatch.start > consumed)
+      if (nextMatch.start > consumed) {
         spans.push({
           text: line.substr(consumed, nextMatch.start - consumed),
           scopes: scopes
         })
+        state.log(`Added missing span between ${consumed} and ${nextMatch.start}`)
+      }
 
       // Apply match
       const matchNode = nextMatch.matchNode
+      const newScopes = scopes.concat(matchNode.getScopes())
       spans.push({
         text: nextMatch.text,
-        scopes: scopes.concat(matchNode.getScopes())
+        scopes: newScopes
       })
+      state.currentContext.backReferences = nextMatch.captured
+      state.log(`Added span for '${nextMatch.text}' with scopes '${newScopes}'`)
       const matchObj = matchNode.toObject()
       if (matchObj.push) {
-        console.log("push context " + matchObj.push)
-        const context = state.pushContext(matchObj.push)
-        context.backReferences = nextMatch.captured
-        consumed = context.handle(line, state, spans, nextMatch.end)
+        state.log("push context " + matchObj.push)
+        const context = state.pushContexts(matchObj.push)
+        consumed = context.handle(state, spans, nextMatch.end)
       } else if (matchNode.get("pop") === "true") {
-        console.log("pop context")
-        const context = state.contextStack.pop()
-        context.backReferences = []
-        // jump consumed
-        return nextMatch.end
-      } else if (matchObj.set) {
+        state.log(`pop context '${state.currentContext.getId()}'. Return ${nextMatch.end}`)
         state.contextStack.pop()
-        const context = state.pushContext(matchObj.push)
+        //state.currentContext.backReferences = [] Clear back refs ever?
+        // jump consumed
+        return state.currentContext.handle(state, spans, nextMatch.end)
+      } else if (matchObj.set) {
+        state.log(`set context so pop '${state.currentContext.getId()}' and push 'matchObj.push'`)
+        state.contextStack.pop()
+        const context = state.pushContexts(matchObj.push)
+
+        // TODO: how do back refs work with set?
         context.backReferences = nextMatch.captured
-        return context.handle(line, state, spans, nextMatch.end)
+        return context.handle(state, spans, nextMatch.end)
       } else {
         consumed = nextMatch.end
       }
     }
     // Not sure about this. What about run ons?
-    if (consumed < len - 1)
+    if (consumed < len - 1) {
+      state.log("Consumed ${consumed} is less than ${len - 1}. Adding scope.")
       spans.push({
         text: line.substr(consumed),
         scopes: state.getScopeChain()
       })
+      consumed = len // Minus 1 or 1?
+    }
+    state.log("handled line.")
     return consumed
   }
 }
@@ -224,18 +259,39 @@ class State {
     this.contextStack.push(program.getMainContext())
   }
 
+  log(...obj: any) {
+    console.log(this.currentLine + ": ", ...obj)
+  }
+
+  logError(...obj: any) {
+    console.error(this.currentLine + ": ", ...obj)
+  }
+
+  getContextChain() {
+    return this.contextStack.map(context => context.getId()).join(" ")
+  }
+
   getScopeChain() {
     const arr = this.contextStack.map(context => context.get("meta_scope")).filter(i => i)
     arr.unshift(this._program.scope)
     return arr
   }
 
-  pushContext(name) {
-    const context = this._program.getNode("contexts " + name)
-    if (!context) throw new Error(`${name} context not found`)
+  getBackReferences() {
+    if (this.contextStack.length === 1) return []
 
-    this.contextStack.push(context)
-    return context
+    return this.contextStack[this.contextStack.length - 2].backReferences
+  }
+
+  pushContexts(names) {
+    names.split(" ").forEach(name => {
+      const context = this._program.getNode("contexts " + name)
+      if (!context) throw new Error(`${name} context not found`)
+
+      this.contextStack.push(context)
+    })
+
+    return this.currentContext
   }
 
   public get currentContext() {
@@ -245,6 +301,7 @@ class State {
   public contextStack: ContextNode[] = []
   public remainingLines: string[]
   public parsedSpans: Span[]
+  public currentLine: string
   public captured: string[] // does each match retain its own captured?
 }
 
@@ -256,7 +313,12 @@ class Line {
 
   public parse(state: State): string {
     const spans: Span[] = []
-    state.currentContext.handle(this._string, state, spans)
+    state.currentLine = this._string
+    const len = this._string.length
+    let current = 0
+    current = state.currentContext.handle(state, spans)
+    // What if currentContext does not fully handle line?
+
     return `line\n` + spans.map(span => ` span ${span.text}\n  scopes ${span.scopes.join(" ")}`).join("\n")
   }
 }
@@ -306,7 +368,8 @@ contexts:`
       return scopes
         .split(" ")
         .map(scope => {
-          const color = scope.match(/\._([^.]+)/)
+          // cleanup
+          const color = scope.includes(".") ? scope.match(/\._([^.]+)/) : [0, scope]
           if (color) return `color: ${color[1]};`
           return ""
         })
@@ -331,57 +394,12 @@ contexts:`
     )
   }
 
-  /*
-line
- span 1
-  scopes source.dag storage.type.string._blue.digit
- span
-  scopes source.dag
- span +
-  scopes source.dag variable.parameter.function._orange.plus
- span
-  scopes source.dag
- span 1
-  scopes source.dag storage.type.string._blue.digit
- span ;
-  scopes source.dag entity.name.tag._red.semicolon
-line
-
-  */
-
   execute(content: string): string {
     const state = new State(this)
     return content
       .split("\n")
       .map(line => new Line(line).parse(state))
       .join("\n")
-
-    //console.log(new jtree.TreeNode(res).toString())
-    // return res
-
-    // const contextStack = [this.contexts.main]
-    // for (let line in lines) {
-    //   let context = contextStack[contextStack.length - 1]
-    //   let matchBlocks = context.getMatchBlocks()
-    //   let part = ""
-    //   for (let matchBlock of matchBlocks) {
-    //     for (let char of line.split("")) {
-    //       part += char
-    //       let matches = part.match(matchBlock.match)
-    //       if (matches) {
-    //         // apply scope to text. capture
-    //         if (matchBlock.pop) {
-    //         } else if (matchBlock.embed) {
-    //         } else if (matchBlock.push) {
-    //         } else if (matchBlock.set) {
-    //           // first pops this context, then does same as push
-    //         }
-    //       }
-    //     }
-    //     //if (line)
-    //   }
-    // }
-    // return results
   }
 }
 
