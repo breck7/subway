@@ -259,11 +259,11 @@ class State {
   }
 
   log(...obj: any) {
-    console.log(this.currentLine + ": ", ...obj)
+    if (this._program.verbose) console.log(this.currentLine + ": ", ...obj)
   }
 
   logError(...obj: any) {
-    console.error(this.currentLine + ": ", ...obj)
+    if (this._program.verbose) console.error(this.currentLine + ": ", ...obj)
   }
 
   getContextChain() {
@@ -325,6 +325,7 @@ class Line {
 class ProgramNode extends jtree.program {
   public hidden = false
   public first_line_match = ""
+  public verbose = true
 
   toYAML() {
     return `%YAML 1.2
@@ -369,7 +370,7 @@ contexts:`
         .map(scope => {
           // cleanup
           const color = scope.includes(".") ? scope.match(/\._([^.]+)/) : [0, scope]
-          if (color) return `color: ${color[1]};`
+          if (color) return `color:${color[1]};`
           return ""
         })
         .filter(i => i)

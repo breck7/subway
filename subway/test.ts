@@ -2,8 +2,9 @@
 
 const jtree = require("jtree")
 const subwayNodes = require("./built/nodes.js")
+const cheerio = require("cheerio")
 const fs = require("fs")
-const colors = subwayNodes.Colors
+const tap = require("tap")
 
 const grammarPath = __dirname + "/subway.grammar"
 const SubwayConstructor = jtree.getProgramConstructor(grammarPath)
@@ -12,22 +13,26 @@ const SubwayConstructor = jtree.getProgramConstructor(grammarPath)
 // [] Test programs for errors
 // [] Execute programs and check results
 
-const save = (name: string, results: string) =>
-  fs.writeFileSync(__dirname + `/testOutput/${name}.html`, results, "utf8")
+const save = (name: string, results: string) => {
+  const filename = __dirname + `/testOutput/${name}.html`
+  fs.writeFileSync(filename, results, "utf8")
+  return filename
+}
 
 const testTree: any = {}
+testTree._runOnly = []
 
-testTree.heredoc = () => {
+testTree.heredoc = equal => {
   const grammar = `name PHP
-global_scope source.php
+global_scope black
 contexts
  main
   match <?php
-   scope ${colors.orange}.open_php
+   scope orange
   match <<<([A-Za-z][A-Za-z0-9_]*)
    push heredoc
  heredoc
-  meta_scope string.unquoted.heredoc
+  meta_scope gray
   match ^\\1;
    pop true`
 
@@ -41,38 +46,58 @@ DOG;`
 
   const expected = `line
  span <?php
-  scopes source.php
+  scopes orange
 line
  span
-  scopes source.php
+  scopes black
 line
  span $foo =
-  scopes source.php
+  scopes black
  span <<<DOG
-  scopes source.php string.unquoted.heredoc
+  scopes black gray
 line
  span   This is a dog
-  scopes source.php string.unquoted.heredoc
+  scopes black gray
 line
  span   He is yellow.
-  scopes source.php string.unquoted.heredoc
+  scopes black gray
 line
  span   DOG;
-  scopes source.php string.unquoted.heredoc
+  scopes black gray
 line
  span DOG;
-  scopes source.php string.unquoted.heredoc`
+  scopes black gray`
 
   const program = new SubwayConstructor(grammar)
-
+  program.verbose = false
   const results = program.execute(code)
 
-  console.log(results)
+  const errs = program.getProgramErrors()
+  equal(errs.length, 0, "no errors")
+
+  //  console.log(results)
 
   save("heredoc", program.toHtml(results))
 }
 
-testTree.digits = () => {
+testTree.grammarError = equal => {
+  const grammar = `version 2.1
+name dag
+file_extensions dag
+global_2scope source.dag
+contexts
+ main
+  match \\d+
+   scopde blue`
+
+  const program = new SubwayConstructor(grammar)
+  program.verbose = false
+
+  const errs = program.getProgramErrors()
+  equal(errs.length, 2, "2 errors")
+}
+
+testTree.digits = equal => {
   const grammar = `version 2.1
 name dag
 file_extensions dag
@@ -80,38 +105,49 @@ global_scope source.dag
 contexts
  main
   match \\d+
-   scope ${colors.blue}.digit
-   push brackets
+   scope blue
   match \\+
-   scope ${colors.orange}.plus
+   scope orange
+  match \\w+
+   scope green
   match ;
-   scope ${colors.red}.semicolon`
+   scope red`
 
   const program = new SubwayConstructor(grammar)
+  program.verbose = false
 
   const errs = program.getProgramErrors()
-  if (errs.length) {
-    console.log(errs)
-  } else {
-    console.log("no program errors")
-  }
+  equal(errs.length, 0, "no errors")
+
   //console.log(program.getInPlaceSyntaxTreeWithNodeTypes())
   //console.log(program.getTreeWithNodeTypes())
-
-  //const results = program.execute(`1 + 1;`)
 
   const results = program.execute(`1 + 1;
   23 + 232;;
   2++2;zaaa
 
   23`)
-  console.log(results)
 
-  save("digits", program.toHtml(results))
+  const html = program.toHtml(results)
+  save("digits", html)
 
-  // console.log(program.toString())
+  const cheer = cheerio.load(html)
+  equal(cheer("span:contains(zaaa)").css("color"), "green")
+
   //const yaml = program.toYAML()
   //console.log(yaml)
 }
-testTree.digits()
-testTree.heredoc()
+
+const runTests = testTree => {
+  const testsToRun = testTree._runOnly.length
+    ? testTree._runOnly
+    : Object.keys(testTree).filter(key => !key.startsWith("_"))
+  testsToRun.forEach(key => {
+    tap.test(key, function(childTest) {
+      const testCase = testTree[key](childTest.equal)
+      childTest.end()
+    })
+  })
+}
+
+runTests(testTree)

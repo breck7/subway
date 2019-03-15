@@ -175,10 +175,12 @@ class State {
         this.contextStack.push(program.getMainContext());
     }
     log(...obj) {
-        console.log(this.currentLine + ": ", ...obj);
+        if (this._program.verbose)
+            console.log(this.currentLine + ": ", ...obj);
     }
     logError(...obj) {
-        console.error(this.currentLine + ": ", ...obj);
+        if (this._program.verbose)
+            console.error(this.currentLine + ": ", ...obj);
     }
     getContextChain() {
         return this.contextStack.map(context => context.getId()).join(" ");
@@ -225,6 +227,7 @@ class ProgramNode extends jtree.program {
         super(...arguments);
         this.hidden = false;
         this.first_line_match = "";
+        this.verbose = true;
         this.variables = {};
         this.contexts = {
             prototype: new ContextNode(),
@@ -264,7 +267,7 @@ contexts:`;
                 // cleanup
                 const color = scope.includes(".") ? scope.match(/\._([^.]+)/) : [0, scope];
                 if (color)
-                    return `color: ${color[1]};`;
+                    return `color:${color[1]};`;
                 return "";
             })
                 .filter(i => i)
