@@ -22,7 +22,7 @@ const save = (name: string, results: string) => {
 const testTree: any = {}
 testTree._runOnly = []
 
-testTree.heredoc = equal => {
+testTree.heredoc = (equal, isColor) => {
   const grammar = `name PHP
 global_scope black
 contexts
@@ -97,7 +97,7 @@ contexts
   equal(errs.length, 2, "2 errors")
 }
 
-testTree.digits = equal => {
+testTree.digits = (equal, isColor) => {
   const grammar = `version 2.1
 name dag
 file_extensions dag
@@ -131,8 +131,10 @@ contexts
   const html = program.toHtml(results)
   save("digits", html)
 
-  const cheer = cheerio.load(html)
-  equal(cheer("span:contains(zaaa)").css("color"), "green")
+  isColor(html, "23", "blue")
+  isColor(html, "+", "orange")
+  isColor(html, ";", "red")
+  isColor(html, "zaaa", "green")
 
   //const yaml = program.toYAML()
   //console.log(yaml)
@@ -144,7 +146,14 @@ const runTests = testTree => {
     : Object.keys(testTree).filter(key => !key.startsWith("_"))
   testsToRun.forEach(key => {
     tap.test(key, function(childTest) {
-      const testCase = testTree[key](childTest.equal)
+      const testCase = testTree[key](childTest.equal, (html, text, color) => {
+        childTest.equal(
+          cheerio
+            .load(html)(`span:contains(${text})`)
+            .css("color"),
+          color
+        )
+      })
       childTest.end()
     })
   })
