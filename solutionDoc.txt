@@ -318,3 +318,86 @@ When you push onto the stack, the new context DOES get the full line, but it see
 
 
 
+
+name PHP
+global_scope source.php
+contexts
+ main
+  match \$[a-z]+
+   scope f._red.php
+  match <\?php
+   scope foo._orange.php
+  match <<<([A-Za-z][A-Za-z0-9_]*)
+   push heredoc
+  match \b\d+\b
+   scope r._purple.int
+ heredoc
+  meta_scope f._blue.2
+  match ^\1;
+   pop true
+
+
+Next steps:
+- 10 test cases? For automated tests.
+- we need automated tests. And that will get us through all things.
+
+
+tap test.ts
+
+
+
+
+
+
+
+
+name Flow
+global_scope source.flow
+contexts
+ main
+  match ( *)(go.table|chart)
+   scope blue
+   push tile content
+  match .
+   scope red
+ tile
+  match \1 left
+   scope green
+   push position
+  match \1(?! )
+   pop true
+  match \1 .+
+   scope pink
+ position
+  match \d+
+   scope purple
+  match .
+   scope red
+  match $
+   pop true
+ content
+  match [a-z \d]
+   scope orange
+  match $
+   pop true
+
+x 32
+ go.table
+go.table hello man
+ left 23 this should be error
+ title foobar
+chart bam
+ chart
+table h
+ left 23
+left 32
+
+
+Do a real flow program:
+
+
+
+
+
+
+
