@@ -17,7 +17,6 @@ then one item for each capturing parenthesis that matched containing the text th
 class MatchNode extends jtree.NonTerminalNode {
     constructor() {
         super(...arguments);
-        this.pop = false; // Can only be true
         // When a context has multiple patterns, the leftmost one will be found.
         // When multiple patterns match at the same position, the first defined pattern will be selected.
         this.match = /a/g;
@@ -30,13 +29,21 @@ class MatchNode extends jtree.NonTerminalNode {
         let match;
         let matches = [];
         let reg = this.getContent();
+        if (backReferences.length > 0 && !reg.match(/\\\d/))
+            console.error(`Expected a backreference(s) in ${reg} but none passed.`);
         // replace back references
-        for (let index in backReferences) {
-            let re2 = new RegExp("\\" + index, "g");
+        for (let index = 0; index < backReferences.length; index++) {
+            let re2 = new RegExp(`\\\\${index + 1}`, "g");
             reg = reg.replace(re2, backReferences[index]);
         }
         let re = new RegExp(reg, "g");
+        let startChar = -1;
         while ((match = re.exec(line)) !== null) {
+            // protect against infinite loops, ie if regex is ^
+            if (match.index > startChar)
+                startChar = match.index;
+            else
+                break;
             const text = match[0];
             const captured = [];
             let index = 1;
@@ -53,12 +60,18 @@ class MatchNode extends jtree.NonTerminalNode {
             };
             matches.push(result);
         }
+        console.log(line);
+        console.log(matches);
         return matches;
     }
 }
 class Include {
 }
 class ContextNode extends jtree.NonTerminalNode {
+    constructor() {
+        super(...arguments);
+        this.backReferences = [];
+    }
     getId() {
         return this.getKeyword();
     }
@@ -66,15 +79,20 @@ class ContextNode extends jtree.NonTerminalNode {
         // todo: add includes and prototypes
         return this.items;
     }
-    handle(line, state, spans, consumed = 0, backReferences = []) {
-        const allMatchResults = this.getChildrenByNodeType(MatchNode).map(node => node.test(line, backReferences));
-        console.log(backReferences);
+    handle(line, state, spans, consumed = 0) {
+        const allMatchResults = this.getChildrenByNodeType(MatchNode).map(node => node.test(line, this.backReferences));
+        console.log(line);
         // Sort by left most.
         const sorted = lodash.sortBy(lodash.flatten(allMatchResults), ["start"]);
         const len = line.length;
+        console.log(sorted.length);
+        if (line === "DOG;")
+            debugger;
         while (consumed < len && sorted.length) {
             const nextMatch = sorted.shift();
             const scopes = state.getScopeChain();
+            if (nextMatch.start < consumed)
+                continue;
             // add skipped matches:
             if (nextMatch.start > consumed)
                 spans.push({
@@ -90,17 +108,25 @@ class ContextNode extends jtree.NonTerminalNode {
             const matchObj = matchNode.toObject();
             if (matchObj.push) {
                 console.log("push context " + matchObj.push);
-                consumed = state.pushContext(matchObj.push).handle(line, state, spans, nextMatch.end, nextMatch.captured);
+                const context = state.pushContext(matchObj.push);
+                context.backReferences = nextMatch.captured;
+                consumed = context.handle(line, state, spans, nextMatch.end);
             }
-            else if (matchObj.pop) {
+            else if (matchNode.get("pop") === "true") {
                 console.log("pop context");
-                state.contextStack.pop();
+                const context = state.contextStack.pop();
+                context.backReferences = [];
                 // jump consumed
                 return nextMatch.end;
             }
             else if (matchObj.set) {
                 state.contextStack.pop();
-                return state.pushContext(matchObj.push).handle(line, state, spans, nextMatch.end, nextMatch.captured);
+                const context = state.pushContext(matchObj.push);
+                context.backReferences = nextMatch.captured;
+                return context.handle(line, state, spans, nextMatch.end);
+            }
+            else {
+                consumed = nextMatch.end;
             }
         }
         // Not sure about this. What about run ons?
