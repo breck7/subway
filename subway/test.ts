@@ -145,42 +145,7 @@ contexts
 }
 
 testTree.flow = (equal, isColor) => {
-  const grammar = `name Flow
-global_scope source.flow
-contexts
- main
-  include tiles
- tiles
-  match tables.basic>
-   scope blue
-   push tile content
-  match views.list>
-  match samples.iris>
-  match goog.pie>
-  match apply.filter>
-  match social.reddit>
-  match .
-   scope red
- tile
-  match \\1 left
-   scope green
-   push position
-  match \\1(?! )
-   pop true
-  match \\1 .+
-   scope pink
- position
-  match \\d+
-   scope purple
-  match .
-   scope red
-  match $
-   pop true
- content
-  match [a-z \\d]
-   scope orange
-  match $
-   pop true`
+  const grammar = fs.readFileSync("./flow.grammar", "utf8")
 
   const program = new SubwayConstructor(grammar)
   program.verbose = false
@@ -191,26 +156,7 @@ contexts
   //console.log(program.getInPlaceSyntaxTreeWithNodeTypes())
   //console.log(program.getTreeWithNodeTypes())
 
-  const results = program.execute(` tables.basic>
-  sam
-
-views.list>
-samples.iris>
- tables.basic>
-  title Hello world
- 
- tables.basic>
- goog.pie>
- apply.filter> vir
-  tables.basic>
-
-social.reddit>
- tables.basic>
-  left ad
-  right 23
-tabes.basic>
- left 2
-`)
+  const results = program.execute(fs.readFileSync("./test.flow", "utf8"))
 
   const html = program.toHtml(results)
   save("flow", html)
@@ -218,7 +164,8 @@ tabes.basic>
   isColor(html, "sam", "red")
   isColor(html, "views.list>", "purple")
   isColor(html, "goog.pie>", "purple")
-  isColor(html, "Hello", "purple")
+  isColor(html, "77", "aqua")
+  isColor(html, "Hello", "gray")
 
   //const yaml = program.toYAML()
   //console.log(yaml)
@@ -231,12 +178,9 @@ const runTests = testTree => {
   testsToRun.forEach(key => {
     tap.test(key, function(childTest) {
       const testCase = testTree[key](childTest.equal, (html, text, color) => {
-        childTest.equal(
-          cheerio
-            .load(html)(`span:contains(${text})`)
-            .css("color"),
-          color
-        )
+        let el = cheerio.load(html)(`span:contains(${text})`)
+        if (!el.length) childTest.equal(false, true, `No ${text} found`)
+        else childTest.equal(el.css("color"), color, text)
       })
       childTest.end()
     })

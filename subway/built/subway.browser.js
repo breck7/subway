@@ -37,11 +37,13 @@ class MatchNode extends jtree.NonTerminalNode {
         }
         return reg;
     }
-    test(line, state) {
+    test(line, state, consumed) {
         let match;
         let matches = [];
         let reg = this.getReg(state);
         let re = new RegExp(reg, "g");
+        // Only should break for lookbehinds?
+        line = line.substr(consumed);
         let startChar = -1;
         while ((match = re.exec(line)) !== null) {
             // protect against infinite loops, ie if regex is ^
@@ -58,8 +60,8 @@ class MatchNode extends jtree.NonTerminalNode {
                 index++;
             }
             const result = {
-                start: match.index,
-                end: text.length + match.index,
+                start: match.index + consumed,
+                end: text.length + match.index + consumed,
                 text: text,
                 captured: captured,
                 matchNode: this
@@ -93,7 +95,7 @@ class ContextNode extends jtree.NonTerminalNode {
     handle(state, spans, consumed = 0) {
         const line = state.currentLine;
         state.log(`'${this.getKeyword()}' handling '${line}'`);
-        const allMatchResults = this.getChildrenByNodeType(MatchNode).map(node => node.test(line, state));
+        const allMatchResults = this.getChildrenByNodeType(MatchNode).map(node => node.test(line, state, consumed));
         // Sort by left most.
         const sorted = lodash.sortBy(lodash.flatten(allMatchResults), ["start"]);
         const len = line.length;
@@ -213,7 +215,7 @@ class Line {
         let current = 0;
         current = state.currentContext.handle(state, spans);
         // What if currentContext does not fully handle line?
-        return `line\n` + spans.map(span => ` span ${span.text}\n  scopes ${span.scopes.join(" ")}`).join("\n");
+        return (`line ${this._string}\n` + spans.map(span => ` span ${span.text}\n  scopes ${span.scopes.join(" ")}`).join("\n"));
     }
 }
 class ProgramNode extends jtree.program {

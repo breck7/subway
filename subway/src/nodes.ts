@@ -85,12 +85,15 @@ class MatchNode extends jtree.NonTerminalNode implements ContextStatement {
     return reg
   }
 
-  public test(line: string, state: State): MatchResult[] {
+  public test(line: string, state: State, consumed: number): MatchResult[] {
     let match: RegExpExecArray
     let matches: MatchResult[] = []
 
     let reg = this.getReg(state)
     let re = new RegExp(reg, "g")
+
+    // Only should break for lookbehinds?
+    line = line.substr(consumed)
 
     let startChar = -1
     while ((match = re.exec(line)) !== null) {
@@ -107,8 +110,8 @@ class MatchNode extends jtree.NonTerminalNode implements ContextStatement {
         index++
       }
       const result: MatchResult = {
-        start: match.index,
-        end: text.length + match.index,
+        start: match.index + consumed,
+        end: text.length + match.index + consumed,
         text: text,
         captured: captured,
         matchNode: this
@@ -167,7 +170,7 @@ class ContextNode extends jtree.NonTerminalNode {
     const line = state.currentLine
     state.log(`'${this.getKeyword()}' handling '${line}'`)
     const allMatchResults: MatchResult[][] = this.getChildrenByNodeType(MatchNode).map(node =>
-      (<MatchNode>node).test(line, state)
+      (<MatchNode>node).test(line, state, consumed)
     )
 
     // Sort by left most.
@@ -318,7 +321,9 @@ class Line {
     current = state.currentContext.handle(state, spans)
     // What if currentContext does not fully handle line?
 
-    return `line\n` + spans.map(span => ` span ${span.text}\n  scopes ${span.scopes.join(" ")}`).join("\n")
+    return (
+      `line ${this._string}\n` + spans.map(span => ` span ${span.text}\n  scopes ${span.scopes.join(" ")}`).join("\n")
+    )
   }
 }
 

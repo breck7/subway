@@ -399,5 +399,22 @@ Do a real flow program:
 
 
 
+Here's a problem:
+- when you push a context midline, the new context has to look at whole line (for lookbehinds), BUT, that can break things like .+ (because they will be greedy and match the whole line, even though they should just match part you want to )..
+-- So, do I handle lookbehinds manually??
+-- do I special case lookbehinds?
+-- do I drop support for lookbehinds?
+-- Let's drop support for them for now, and see what happens.
+
+
+
+
+
+
+
+
+
+
+
 
 

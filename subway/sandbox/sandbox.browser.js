@@ -10,9 +10,8 @@ const main = grammarCode => {
   const treeResults = $("#treeResults")
   const highlighted = $("#highlighted")
   either.on("keyup", function() {
-    const grammar = $("#grammar").val()
     const code = $("#code").val()
-    const program = new SubwayConstructor(grammar)
+    const program = new SubwayConstructor(grammarArea.val().replace(/\/\//g, "/"))
 
     const grammarErrors = program.getProgramErrors()
 
@@ -24,7 +23,7 @@ const main = grammarCode => {
   })
 
   either.on("blur", function() {
-    localStorage.setItem("grammar", $("#grammar").val())
+    localStorage.setItem("grammar", grammarArea.val())
     localStorage.setItem("code", $("#code").val())
   })
 
