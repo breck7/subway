@@ -156,10 +156,49 @@ testTree.flow = (equal, isColor) => {
   //console.log(program.getInPlaceSyntaxTreeWithNodeTypes())
   //console.log(program.getTreeWithNodeTypes())
 
-  const results = program.execute(fs.readFileSync("./test.flow", "utf8"))
-
-  const html = program.toHtml(results)
+  let html = program.toHtml(program.execute(fs.readFileSync("./test.flow", "utf8")))
   save("flow", html)
+
+  isColor(html, "sam", "red")
+  isColor(html, "views.list>", "purple")
+  isColor(html, "goog.pie>", "purple")
+  isColor(html, "77", "aqua")
+  isColor(html, "Hello", "gray")
+
+  html = program.toHtml(
+    program.execute(`tables.basic>
+ title Foobar
+  apply.filter>`)
+  )
+  isColor(html, "apply.filter>", "red")
+
+  //const yaml = program.toYAML()
+  //console.log(yaml)
+}
+
+testTree.simple = (equal, isColor) => {
+  const grammar = `contexts
+ main
+  include tiles
+ tiles
+  match a
+   scope green
+   push tile
+ tile
+  match b
+   scope yellow
+   push_context`
+
+  const program = new SubwayConstructor(grammar)
+  program.verbose = false
+
+  const errs = program.getProgramErrors()
+  equal(errs.length, 0, "no errors")
+
+  const code = `a
+  b`
+
+  let html = program.toHtml(program.execute(code))
 
   isColor(html, "sam", "red")
   isColor(html, "views.list>", "purple")

@@ -408,6 +408,46 @@ Here's a problem:
 
 
 
+[] Lookup javascript regex match offset.
+
+[] Lookahead plus capture
+
+^ matches immediately *after* a line break (does not capture break)
+$ matches immediately *before* line break (does not capture break)
+
+(?:x) non capturing.... same as (x), but doesnt remember match. helps when you want a group. that way you dont have to do weird offsets in your backreferences.
+
+
+- A word boundary is not a "character" to be matched; like an anchor, a word boundary is not included in the match. In other words, the length of a matched word boundary is zero.
+
+\w Equivalent to [A-Za-z0-9_]
+
+\n Where n is a positive integer, a back reference to the last substring matching the n parenthetical in the regular expression (counting left parentheses). For example, /apple(,)\sorange\1/ matches 'apple, orange,' in "apple, orange, cherry, peach."
+
+So you *can* have backreferences in the same REGEX!
+
+function escapeRegExp(string) {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
+}
+
+
+
+
+re.lastIndex = 6;
+
+
+
+This works!!!
+
+// Question: can we set lastIndex, to match from a line offset
+    // while using the earlier part of the line for lookbehinds?
+    // TEST:
+    foo = new RegExp("(?<=za)bc", "g")
+    foo.lastIndex = 1
+    match1 = foo.exec("abc") // should not match
+    foo.lastIndex = 1
+    match2 = foo.exec("zabc") // should match
+
 
 
 

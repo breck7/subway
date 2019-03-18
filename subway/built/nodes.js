@@ -48,6 +48,8 @@ class MatchNode extends jtree.NonTerminalNode {
         let re = new RegExp(reg, "g");
         // Only should break for lookbehinds?
         line = line.substr(consumed);
+        // This will start things at consumed, but allow for lookbehinds.
+        //re.lastIndex = consumed
         let startChar = -1;
         while ((match = re.exec(line)) !== null) {
             // protect against infinite loops, ie if regex is ^
@@ -137,6 +139,11 @@ class ContextNode extends jtree.NonTerminalNode {
                 const context = state.pushContexts(matchObj.push);
                 consumed = context.handle(state, spans, nextMatch.end);
             }
+            else if (matchObj.push_context) {
+                state.log("push anon context");
+                const context = state.pushAnonContext(matchNode.getNode("push_context"));
+                consumed = context.handle(state, spans, nextMatch.end);
+            }
             else if (matchNode.get("pop") === "true") {
                 state.log(`pop context '${state.currentContext.getId()}'. Return ${nextMatch.end}`);
                 state.contextStack.pop();
@@ -197,6 +204,10 @@ class State {
             return [];
         return this.contextStack[this.contextStack.length - 2].backReferences;
     }
+    pushAnonContext(context) {
+        this.contextStack.push(context);
+        return context;
+    }
     pushContexts(names) {
         names.split(" ").forEach(name => {
             const context = this._program.getNode("contexts " + name);
@@ -246,7 +257,7 @@ scope: ${this.scope}
 contexts:`;
     }
     get name() {
-        return this.get("name");
+        return this.get("name") || "UnnamedGrammar";
     }
     getMainContext() {
         const main = this.getNode("contexts main");
@@ -258,7 +269,7 @@ contexts:`;
         return this.getNode("file_extensions").getWordsFrom(1);
     }
     get scope() {
-        return this.get("global_scope");
+        return this.get("global_scope") || "brown";
     }
     toHtml(content) {
         const tree = new jtree.TreeNode(content);
